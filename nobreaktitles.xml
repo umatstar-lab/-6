@@ -5,7 +5,7 @@
     <creationDate>2026-10-29</creationDate>
     <copyright>(C) 2026</copyright>
     <license>GNU General Public License version 2 or later</license>
-    <version>1.2.0</version>
+    <version>1.2.1</version>
     <description>Replaces spaces after configured short words and abbreviations in website text with non-breaking spaces.</description>
     <namespace path="src">Joomla\Plugin\System\NoBreakTitles</namespace>
 
@@ -60,6 +60,10 @@
                 <field name="abbreviations" type="textarea" rows="8" filter="raw"
                     label="PLG_SYSTEM_NOBREAKTITLES_ABBREVIATIONS"
                     description="PLG_SYSTEM_NOBREAKTITLES_ABBR_DESC" default="м., г., ул., вул., р-н, с., смт., д., им., ст., акад., проф., доц., тис., млн." />
+                <field name="number_abbreviations" type="textarea" rows="3" filter="raw"
+                    label="PLG_SYSTEM_NOBREAKTITLES_NUMBER_ABBR"
+                    description="PLG_SYSTEM_NOBREAKTITLES_NUMBER_ABBR_DESC"
+                    default="р., рр., г., гг." />
             </fieldset>
         </fields>
     </config>

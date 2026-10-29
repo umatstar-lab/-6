@@ -64,7 +64,7 @@
         return new RegExp(
             '(?<![\\p{L}\\p{N}])(' +
             words.join('|') +
-            ')(?:[\\u0020\\u00A0\\t\\r\\n]+)(?=[\\p{L}\\p{N}])',
+            ')([\\u0020\\u00A0\\t\\r\\n]+)(?=[\\p{L}\\p{N}])',
             'giu'
         );
     }
@@ -72,52 +72,111 @@
     // Work with text nodes only: never reserialize component/module markup.
     const excludedSelector = 'script, style, textarea, input, select, option, pre, code, kbd, samp, noscript, template, iframe, svg, math, [contenteditable]:not([contenteditable="false"]), [data-nobreaktitles="off"]';
 
-    function eligible(node) {
-        return node.parentElement && !node.parentElement.closest(excludedSelector);
+    function isInline(element) {
+        const display = window.getComputedStyle(element).display;
+        return display === 'inline' || display === 'contents';
     }
 
-    function processTextNode(node, pattern) {
-        if (!eligible(node) || !node.nodeValue) return;
-        pattern.lastIndex = 0;
-        const result = node.nodeValue.replace(pattern, '$1\u00A0');
-        if (result !== node.nodeValue) node.nodeValue = result;
+    function blockRoot(node) {
+        let element = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
+        while (element && element !== document.body && isInline(element)) element = element.parentElement;
+        return element;
     }
 
-    function process(root, pattern) {
-        if (root.nodeType === Node.TEXT_NODE) {
-            processTextNode(root, pattern);
-            return;
+    function numberPattern() {
+        const words = unique(list(options.numberAbbr === undefined ? 'р., рр., г., гг.' : options.numberAbbr))
+            .sort(function (a, b) { return b.length - a.length; }).map(escapeRegex);
+        if (!words.length) return null;
+        return new RegExp('(\\p{N})([\\u0020\\u00A0\\t\\r\\n]+)(?=(?:' + words.join('|') + ')(?![\\p{L}\\p{N}]))', 'giu');
+    }
+
+    // Match across inline tags, but edit only whitespace inside existing text nodes.
+    // Element identity, event listeners and component markup remain intact.
+    function processRun(nodes, patterns) {
+        if (!nodes.length) return;
+        const text = nodes.map(function (node) { return node.nodeValue; }).join('');
+        const edits = new Map();
+        patterns.forEach(function (pattern) {
+            pattern.lastIndex = 0;
+            let match;
+            while ((match = pattern.exec(text))) {
+                const start = match.index + match[1].length;
+                const end = start + match[2].length;
+                if (text.slice(start, end) !== '\u00A0') edits.set(start, { start: start, end: end });
+            }
+        });
+        if (!edits.size) return;
+        let offset = 0;
+        nodes.forEach(function (node) {
+            const original = node.nodeValue;
+            const limit = offset + original.length;
+            const changes = [];
+            edits.forEach(function (edit) {
+                if (edit.start < limit && edit.end > offset) {
+                    changes.push({
+                        start: Math.max(0, edit.start - offset),
+                        end: Math.min(original.length, edit.end - offset),
+                        value: edit.start >= offset ? '\u00A0' : ''
+                    });
+                }
+            });
+            changes.sort(function (a, b) { return b.start - a.start; });
+            let result = original;
+            changes.forEach(function (change) {
+                result = result.slice(0, change.start) + change.value + result.slice(change.end);
+            });
+            if (result !== original) node.nodeValue = result;
+            offset = limit;
+        });
+    }
+
+    function process(root, patterns) {
+        if (!root || root.closest(excludedSelector)) return;
+        let run = [];
+        function flush() { processRun(run, patterns); run = []; }
+        function visit(element) {
+            element.childNodes.forEach(function (node) {
+                if (node.nodeType === Node.TEXT_NODE) {
+                    run.push(node);
+                } else if (node.nodeType === Node.ELEMENT_NODE) {
+                    if (node.matches(excludedSelector + ', br, wbr')) {
+                        flush();
+                    } else if (isInline(node)) {
+                        visit(node);
+                    } else {
+                        flush(); visit(node); flush();
+                    }
+                }
+            });
         }
-        if (root.nodeType !== Node.ELEMENT_NODE || root.closest(excludedSelector)) return;
-        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-        let node;
-        while ((node = walker.nextNode())) processTextNode(node, pattern);
+        visit(root); flush();
     }
 
     function init() {
-        const pattern = buildPattern();
-        if (!pattern || !document.body) return;
-        process(document.body, pattern);
-
-        // Covers AJAX modules and updates to existing text as well as new nodes.
+        const patterns = [buildPattern(), numberPattern()].filter(Boolean);
+        if (!patterns.length || !document.body) return;
+        process(document.body, patterns);
+        const observerOptions = { childList: true, characterData: true, subtree: true };
         const observer = new MutationObserver(function (mutations) {
             const roots = new Set();
             mutations.forEach(function (mutation) {
-                if (mutation.type === 'characterData') {
-                    roots.add(mutation.target);
-                } else {
-                    mutation.addedNodes.forEach(function (node) { roots.add(node); });
-                }
+                const root = blockRoot(mutation.target);
+                if (root && document.body.contains(root)) roots.add(root);
             });
-            roots.forEach(function (node) {
-                if (document.body.contains(node)) process(node, pattern);
-            });
+            // Do not observe our own whitespace edits or repeatedly scan nested roots.
+            observer.disconnect();
+            try {
+                roots.forEach(function (root) {
+                    let parent = root.parentElement;
+                    while (parent) {
+                        if (roots.has(parent)) return;
+                        parent = parent.parentElement;
+                    }
+                    process(root, patterns);
+                });
+            } finally { observer.observe(document.body, observerOptions); }
         });
-        observer.observe(document.body, {
-            childList: true,
-            characterData: true,
-            subtree: true
-        });
+        observer.observe(document.body, observerOptions);
     }
 
     if (document.readyState === 'loading') {
