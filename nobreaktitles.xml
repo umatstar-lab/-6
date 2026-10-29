@@ -5,7 +5,7 @@
     <creationDate>2026-10-29</creationDate>
     <copyright>(C) 2026</copyright>
     <license>GNU General Public License version 2 or later</license>
-    <version>1.2.1</version>
+    <version>1.2.2</version>
     <description>Replaces spaces after configured short words and abbreviations in website text with non-breaking spaces.</description>
     <namespace path="src">Joomla\Plugin\System\NoBreakTitles</namespace>
 

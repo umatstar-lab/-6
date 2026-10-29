@@ -46,8 +46,8 @@ final class NoBreakTitles extends CMSPlugin implements SubscriberInterface
 
         $document->getWebAssetManager()->registerAndUseScript(
             'plg_system_nobreaktitles',
-            Uri::root(true) . '/media/plg_system_nobreaktitles/js/nobreaktitles.js',
-            ['version' => '1.2.1'],
+            rtrim(Uri::root(), '/') . '/media/plg_system_nobreaktitles/js/nobreaktitles.js',
+            ['version' => '1.2.2'],
             ['defer' => true],
             ['core']
         );

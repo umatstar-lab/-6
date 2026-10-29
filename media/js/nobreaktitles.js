@@ -72,9 +72,14 @@
     // Work with text nodes only: never reserialize component/module markup.
     const excludedSelector = 'script, style, textarea, input, select, option, pre, code, kbd, samp, noscript, template, iframe, svg, math, [contenteditable]:not([contenteditable="false"]), [data-nobreaktitles="off"]';
 
+    // Conservative phrasing-element list: never force style/layout calculation.
+    // Unknown elements form boundaries so separate module blocks cannot be joined.
+    const inlineTags = new Set(['A', 'ABBR', 'B', 'BDI', 'BDO', 'CITE', 'DEL',
+        'DFN', 'EM', 'I', 'INS', 'MARK', 'Q', 'S', 'SMALL', 'SPAN', 'STRONG',
+        'SUB', 'SUP', 'TIME', 'U', 'VAR']);
+
     function isInline(element) {
-        const display = window.getComputedStyle(element).display;
-        return display === 'inline' || display === 'contents';
+        return inlineTags.has(element.tagName);
     }
 
     function blockRoot(node) {
@@ -159,9 +164,23 @@
         const observerOptions = { childList: true, characterData: true, subtree: true };
         const observer = new MutationObserver(function (mutations) {
             const roots = new Set();
+            function addRoot(node) {
+                if (!node || !document.body.contains(node)) return;
+                const element = node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
+                if (!element || element.closest(excludedSelector)) return;
+                const root = blockRoot(node);
+                if (root) roots.add(root);
+            }
             mutations.forEach(function (mutation) {
-                const root = blockRoot(mutation.target);
-                if (root && document.body.contains(root)) roots.add(root);
+                if (mutation.type === 'characterData') {
+                    addRoot(mutation.target);
+                } else {
+                    // Removed nodes need no work. Scan newly inserted blocks only,
+                    // not the entire body when a carousel adds a wrapper or control.
+                    mutation.addedNodes.forEach(function (node) {
+                        if (node.nodeType === Node.TEXT_NODE || node.nodeType === Node.ELEMENT_NODE) addRoot(node);
+                    });
+                }
             });
             // Do not observe our own whitespace edits or repeatedly scan nested roots.
             observer.disconnect();
