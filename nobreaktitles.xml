@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension type="plugin" group="system" method="upgrade">
+    <name>PLG_SYSTEM_NOBREAKTITLES</name>
+    <author>OpenAI</author>
+    <creationDate>2026-10-29</creationDate>
+    <copyright>(C) 2026</copyright>
+    <license>GNU General Public License version 2 or later</license>
+    <version>1.2.0</version>
+    <description>Replaces spaces after configured short words and abbreviations in website text with non-breaking spaces.</description>
+    <namespace path="src">Joomla\Plugin\System\NoBreakTitles</namespace>
+
+    <files>
+        <folder plugin="nobreaktitles">services</folder>
+        <folder>src</folder>
+    </files>
+
+    <media destination="plg_system_nobreaktitles" folder="media">
+        <folder>js</folder>
+    </media>
+
+    <languages>
+        <language tag="en-GB">language/en-GB/plg_system_nobreaktitles.ini</language>
+        <language tag="uk-UA">language/uk-UA/plg_system_nobreaktitles.ini</language>
+        <language tag="ru-RU">language/ru-RU/plg_system_nobreaktitles.ini</language>
+    </languages>
+
+    <config>
+        <fields name="params">
+            <fieldset name="basic" label="PLG_SYSTEM_NOBREAKTITLES_FIELDSET_BASIC">
+                <field name="enabled" type="radio" default="1"
+                    label="PLG_SYSTEM_NOBREAKTITLES_ENABLED"
+                    description="PLG_SYSTEM_NOBREAKTITLES_ENABLED_DESC"
+                    class="btn-group btn-group-yesno">
+                    <option value="1">JYES</option>
+                    <option value="0">JNO</option>
+                </field>
+
+                <field name="language_mode" type="list" default="auto"
+                    label="PLG_SYSTEM_NOBREAKTITLES_LANGUAGE_MODE"
+                    description="PLG_SYSTEM_NOBREAKTITLES_LANGUAGE_MODE_DESC">
+                    <option value="auto">PLG_SYSTEM_NOBREAKTITLES_AUTO</option>
+                    <option value="uk">PLG_SYSTEM_NOBREAKTITLES_UKRAINIAN</option>
+                    <option value="ru">PLG_SYSTEM_NOBREAKTITLES_RUSSIAN</option>
+                    <option value="en">PLG_SYSTEM_NOBREAKTITLES_ENGLISH</option>
+                    <option value="all">PLG_SYSTEM_NOBREAKTITLES_ALL</option>
+                </field>
+
+                <field name="uk_words" type="textarea" rows="8" filter="raw"
+                    label="PLG_SYSTEM_NOBREAKTITLES_UK_WORDS"
+                    description="PLG_SYSTEM_NOBREAKTITLES_WORDS_DESC" default="в, у, з, із, зі, с, на, до, від, за, по, під, над, між, без, для, про, при, через, і, й, та, а, о, к" />
+
+                <field name="ru_words" type="textarea" rows="8" filter="raw"
+                    label="PLG_SYSTEM_NOBREAKTITLES_RU_WORDS"
+                    description="PLG_SYSTEM_NOBREAKTITLES_WORDS_DESC" default="в, во, у, из, изо, с, со, на, к, ко, от, до, за, по, под, над, между, без, для, про, при, через, и, а, но, о, об, обо, к" />
+
+                <field name="en_words" type="textarea" rows="8" filter="raw"
+                    label="PLG_SYSTEM_NOBREAKTITLES_EN_WORDS"
+                    description="PLG_SYSTEM_NOBREAKTITLES_WORDS_DESC" default="a, an, the, in, on, at, by, for, from, of, to, into, with, without, and, or, but, nor" />
+
+                <field name="abbreviations" type="textarea" rows="8" filter="raw"
+                    label="PLG_SYSTEM_NOBREAKTITLES_ABBREVIATIONS"
+                    description="PLG_SYSTEM_NOBREAKTITLES_ABBR_DESC" default="м., г., ул., вул., р-н, с., смт., д., им., ст., акад., проф., доц., тис., млн." />
+            </fieldset>
+        </fields>
+    </config>
+</extension>
