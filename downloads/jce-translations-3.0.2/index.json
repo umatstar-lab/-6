@@ -1,0 +1,14 @@
+[
+  {
+    "name": "files_jce_pro_language_ru-RU_3.0.2.zip",
+    "sha256": "70b54757863f1c2653cce0dbd83dfbded1031c933ab901027e5fb6af061edcab"
+  },
+  {
+    "name": "files_jce_pro_language_uk-UA_3.0.2.zip",
+    "sha256": "9796d7990cc64da9906f6ab5bbba3f6dce4d1b943a7d5beb6c86877212ac835e"
+  },
+  {
+    "name": "pkg_jce_pro_languages_ru_uk_3.0.2.zip",
+    "sha256": "c8286fba030a54d1006233977d3eb40dec4c29ab17408aa0ca027bf65bae3b6d"
+  }
+]
