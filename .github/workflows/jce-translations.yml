@@ -1,0 +1,46 @@
+name: Validate and publish JCE RU UK language packs
+on:
+  push:
+    branches: [jce-translations-ru-uk-3.0.2]
+    paths: [downloads/jce-translations-3.0.2/index.json]
+permissions:
+  contents: write
+jobs:
+  validate-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore and validate language packs
+        run: |
+          python3 - <<'PY'
+          import base64, hashlib, json, pathlib, subprocess, tempfile, zipfile
+          root = pathlib.Path("downloads/jce-translations-3.0.2")
+          index = json.loads((root / "index.json").read_text())
+          allowed = {"files_jce_pro_language_ru-RU_3.0.2.zip", "files_jce_pro_language_uk-UA_3.0.2.zip", "pkg_jce_pro_languages_ru_uk_3.0.2.zip"}
+          assert {x["name"] for x in index} == allowed
+          for item in index:
+              path = pathlib.Path(item["name"])
+              data = base64.b64decode((root / (item["name"] + ".b64")).read_text(), validate=False)
+              assert hashlib.sha256(data).hexdigest() == item["sha256"]
+              path.write_bytes(data)
+              with zipfile.ZipFile(path) as archive:
+                  assert archive.testzip() is None
+                  assert all(not pathlib.PurePosixPath(n).is_absolute() and ".." not in pathlib.PurePosixPath(n).parts for n in archive.namelist())
+                  if path.name.startswith("files_"):
+                      with tempfile.TemporaryDirectory() as temp:
+                          archive.extractall(temp)
+                          temp = pathlib.Path(temp)
+                          expected = json.loads((temp / "translation-validation.json").read_text())
+                          for filename, keys in expected.items():
+                              php = 'set_error_handler(function($n,$s){throw new Exception($s);}); $x=parse_ini_file($argv[1],true,INI_SCANNER_RAW); if($x===false){exit(1);} $keys=[]; foreach($x as $k=>$v){if(is_array($v)){foreach($v as $sk=>$sv){$keys[]=$sk;}}else{$keys[]=$k;}} echo json_encode($keys);'
+                              result = subprocess.run(["php", "-r", php, str(temp / filename)], text=True, capture_output=True, check=True)
+                              assert set(json.loads(result.stdout)) == set(keys), filename
+                          for phpfile in temp.rglob("*.php"):
+                              subprocess.run(["php", "-l", str(phpfile)], check=True)
+                          print(path.name, "INI keys and PHP syntax passed")
+          PY
+      - name: Publish installer archives
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create jce-pro-3.0.2-ru-uk files_jce_pro_language_ru-RU_3.0.2.zip files_jce_pro_language_uk-UA_3.0.2.zip pkg_jce_pro_languages_ru_uk_3.0.2.zip --target "$GITHUB_SHA" --title "JCE Pro 3.0.2 — русский и українська" --notes "Unofficial RU/UK localization of the user-provided JCE Pro 3.0.2 language package. Each language covers all 3124 original INI entries and 41 HTMLPurifier catalogue entries. Based partly on the GPL JCE Crowdin community translations, completed and corrected for this version. Install the combined pkg_ ZIP or an individual files_ ZIP over existing JCE Pro using Joomla 5/6 installer. Original English files and JCE application logic are unchanged. Pro frontend language aliases included. HTMLPurifier catalogues require corresponding Core.Language. Validated archive integrity, INI key coverage and PHP syntax; installation on a running Joomla site has not been tested. See bundled README and SOURCES."
