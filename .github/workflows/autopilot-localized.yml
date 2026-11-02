@@ -1,0 +1,21 @@
+name: Publish localized AutoPilot
+on:
+  push:
+    branches: [autopilot-ru-uk]
+    paths: [downloads/autopilot/pkg_autopilot_v1.0.0_ru_uk.zip.b64]
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore and verify installer
+        run: |
+          base64 --decode downloads/autopilot/pkg_autopilot_v1.0.0_ru_uk.zip.b64 > pkg_autopilot_v1.0.0_ru_uk.zip
+          python3 -m zipfile --test pkg_autopilot_v1.0.0_ru_uk.zip
+      - name: Publish downloadable ZIP
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create autopilot-v1.0.0-ru-uk pkg_autopilot_v1.0.0_ru_uk.zip --target "$GITHUB_SHA" --title "AutoPilot 1.0.0 — RU + UK" --notes "AutoPilot Free 1.0.0 by JoomForge with Russian and Ukrainian translations. Install the attached ZIP using the Joomla extension installer. Original program code and license are preserved; only translations and package language declarations were added."
