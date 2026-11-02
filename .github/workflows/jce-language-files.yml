@@ -1,0 +1,32 @@
+name: Publish JCE language archives
+on:
+  push:
+    branches: [jce-language-files-3.0.2]
+    paths: [downloads/jce-languages-3.0.2.json]
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore and validate archives
+        run: |
+          python3 - <<'PY'
+          import base64, hashlib, json, pathlib, zipfile
+          allowed = {"jce_pro_3.0.2_language_files_original_paths.zip", "files_jce_pro_languages_en-GB_3.0.2.zip"}
+          entries = json.loads(pathlib.Path("downloads/jce-languages-3.0.2.json").read_text())
+          assert {x["name"] for x in entries} == allowed
+          for entry in entries:
+              data = base64.b64decode(entry["base64"], validate=True)
+              assert hashlib.sha256(data).hexdigest() == entry["sha256"]
+              path = pathlib.Path(entry["name"])
+              path.write_bytes(data)
+              with zipfile.ZipFile(path) as archive:
+                  assert archive.testzip() is None
+          PY
+      - name: Publish downloads
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create jce-pro-3.0.2-language-files jce_pro_3.0.2_language_files_original_paths.zip files_jce_pro_languages_en-GB_3.0.2.zip --target "$GITHUB_SHA" --title "JCE Pro 3.0.2 — extracted language files" --notes "Two language-only archives extracted from the user-provided JCE Pro 3.0.2 installer: original files with preserved paths, and a Joomla-installable File extension. Includes 20 original English INI files and one upstream HTMLPurifier English message catalogue. No translations added. No modules exist in the source. Install the files_ ZIP over an existing JCE installation. Uninstalling this File extension removes these language files; reinstall JCE to restore them. Upstream copyright and license headers preserved."
